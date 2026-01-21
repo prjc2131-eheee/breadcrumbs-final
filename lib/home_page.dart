@@ -57,48 +57,51 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
 
-    _loadShareSetting();
-    _loadFriends();
-    _loadLocationPrivacy();
-    _loadPrivacySetting();
-
-    // 監聽登入狀態
+    // 🔐 監聽登入狀態（唯一入口）
     FirebaseAuth.instance.authStateChanges().listen((User? newUser) {
+      if (!mounted) return;
+
       setState(() {
         user = newUser;
       });
 
+      // ✅ 一定要等登入完成
       if (newUser != null) {
+        // 只有這裡才能用 uid
+        _loadShareSetting();
         _loadFriends();
+        _loadLocationPrivacy();
+        _loadPrivacySetting();
+
+        final uid = newUser.uid;
+
+        // 監聽自己的使用者資料
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .snapshots()
+            .listen((doc) {
+          final data = doc.data();
+          if (data == null) return;
+
+          if (!mounted) return;
+
+          setState(() {
+            myHideFrom = List<String>.from(data['hideFrom'] ?? []);
+          });
+        });
       }
     });
 
-    // 監聽所有使用者（頭像 / 名字 / shareTo）
-    FirebaseFirestore.instance
-        .collection('users')
-        .snapshots()
-        .listen((snapshot) {
+    // 🌍 監聽所有使用者（頭像 / 名字 / shareTo）
+    FirebaseFirestore.instance.collection('users').snapshots().listen((snapshot) {
       for (var doc in snapshot.docs) {
         allUsers[doc.id] = doc.data() as Map<String, dynamic>;
       }
+
+      if (!mounted) return;
       setState(() {});
     });
-
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid != null) {
-      FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .snapshots()
-          .listen((doc) {
-        final data = doc.data();
-        if (data == null) return;
-
-        setState(() {
-          myHideFrom = List<String>.from(data['hideFrom'] ?? []);
-        });
-      });
-    }
   }
 
   // === 資源清理：App 關閉時停止追蹤 ===

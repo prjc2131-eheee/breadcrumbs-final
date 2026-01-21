@@ -43,9 +43,6 @@ android {
 flutter {
     source = "../.."
 }
-apply(plugin = "com.google.gms.google-services")
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("com.google.firebase:firebase-analytics-ktx:21.3.0")
-    implementation("com.google.firebase:firebase-firestore-ktx:24.6.1")
 }
